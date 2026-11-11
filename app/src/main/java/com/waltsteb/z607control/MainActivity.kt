@@ -255,7 +255,7 @@ class MainActivity : ComponentActivity() {
                 }
                 item {
                     Text("Nota: Android administra el audio Bluetooth. La app no puede encender el parlante ni cambiar sus fuentes AUX/USB/FM.", style = MaterialTheme.typography.bodySmall)
-                    Text("Z607 SMART CONTROL PRO • Versión inicial APK", style = MaterialTheme.typography.labelSmall)
+                    Text("Z607 SMART CONTROL PRO • Reproductor integrado", style = MaterialTheme.typography.labelSmall)
                 }
             }
         }
