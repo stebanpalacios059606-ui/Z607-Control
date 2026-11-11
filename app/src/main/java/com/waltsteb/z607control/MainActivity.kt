@@ -8,6 +8,12 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.net.Uri
+import android.webkit.JavascriptInterface
+import android.webkit.ValueCallback
+import android.webkit.WebChromeClient
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.os.Build
@@ -22,6 +28,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.unit.dp
 
 class MainActivity : ComponentActivity() {
@@ -36,6 +43,14 @@ class MainActivity : ComponentActivity() {
     private var scanning by mutableStateOf(false)
     private lateinit var adapter: BluetoothAdapter
     private lateinit var audioManager: AudioManager
+
+    private var fileChooserCallback: ValueCallback<Array<Uri>>? = null
+    private val audioFilePicker = registerForActivityResult(
+        ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris ->
+        fileChooserCallback?.onReceiveValue(uris.toTypedArray())
+        fileChooserCallback = null
+    }
 
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -143,6 +158,13 @@ class MainActivity : ComponentActivity() {
         audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, value.toInt().coerceIn(0, max), 0)
     }
 
+    private inner class PlayerBridge {
+        @JavascriptInterface
+        fun openBluetoothSettings() {
+            runOnUiThread { openBluetoothSettings() }
+        }
+    }
+
     @Composable
     private fun ControlScreen() {
         val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1)
@@ -155,6 +177,36 @@ class MainActivity : ComponentActivity() {
                 item {
                     Text("Z607 SMART CONTROL PRO", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
                     Text("CONTROL BLUETOOTH • VOLUMEN", style = MaterialTheme.typography.labelSmall)
+                }
+                item {
+                    Text("REPRODUCTOR DE MÚSICA", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
+                    AndroidView(
+                        modifier = Modifier.fillMaxWidth().height(980.dp),
+                        factory = { context ->
+                            WebView(context).apply {
+                                settings.javaScriptEnabled = true
+                                settings.domStorageEnabled = true
+                                settings.allowFileAccess = true
+                                settings.allowContentAccess = true
+                                settings.mediaPlaybackRequiresUserGesture = true
+                                addJavascriptInterface(PlayerBridge(), "Z607Android")
+                                webViewClient = WebViewClient()
+                                webChromeClient = object : WebChromeClient() {
+                                    override fun onShowFileChooser(
+                                        webView: WebView?,
+                                        filePathCallback: ValueCallback<Array<Uri>>?,
+                                        fileChooserParams: FileChooserParams?
+                                    ): Boolean {
+                                        this@MainActivity.fileChooserCallback?.onReceiveValue(null)
+                                        this@MainActivity.fileChooserCallback = filePathCallback
+                                        audioFilePicker.launch(arrayOf("audio/*"))
+                                        return true
+                                    }
+                                }
+                                loadUrl("file:///android_asset/index.html")
+                            }
+                        }
+                    )
                 }
                 item {
                     Card {
