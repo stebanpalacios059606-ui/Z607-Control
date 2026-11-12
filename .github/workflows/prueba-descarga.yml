@@ -5,6 +5,7 @@ on:
       - v3.0-bluetooth-volumen-extra
     paths:
       - '.github/workflows/prueba-descarga.yml'
+      - 'app/src/main/**'
   workflow_dispatch:
 
 permissions:
